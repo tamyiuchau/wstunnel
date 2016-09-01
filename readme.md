@@ -64,12 +64,12 @@ WantedBy=multi-user.target
 ### Run wstunnel
 
 - If you have previously made a systemd unit, simply start it.
-- If you copied `node` to `/path/to/wstunnel/bin/` and performed `setcap`, `$ /path/to/wstunnel/bin/node -s 0.0.0.0:35565 -t 192.168.0.50:25565`
-- If you performed `setcap` on `/usr/bin/node`, `$ /usr/bin/node -s 0.0.0.0:35565 -t 192.168.0.50:25565`
-- If you don't care at all, `# /usr/bin/node -s 0.0.0.0:35565 -t 192.168.0.50:25565`
+- If you copied `node` to `/path/to/wstunnel/bin/` and performed `setcap`, `$ /path/to/wstunnel/bin/node /path/to/wstunnel/bin/wstt.js -s 0.0.0.0:35565 -t 192.168.0.50:25565`
+- If you performed `setcap` on `/usr/bin/node`, `$ /usr/bin/node /path/to/wstunnel/bin/wstt.js -s 0.0.0.0:35565 -t 192.168.0.50:25565`
+- If you don't care at all, `# /usr/bin/node /path/to/wstunnel/bin/wstt.js -s 0.0.0.0:35565 -t 192.168.0.50:25565`
 
 ## Gotchas
-- Don't do `# /usr/bin/node -s 0.0.0.0:35565 -t 127.0.0.1:25565`, you must proxy to traffic to a non-lo IP address. Just use `192.168.0.50:25565`.
+- Don't do `# /usr/bin/node /path/to/wstunnel/bin/wstt.js -s 0.0.0.0:35565 -t 127.0.0.1:25565`, you must proxy to traffic to a non-lo IP address. Just use `192.168.0.50:25565`.
 
 ## Project mothership
 - https://github.com/mhzed/wstunnel (Base)
