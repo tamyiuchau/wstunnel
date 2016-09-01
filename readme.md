@@ -1,4 +1,4 @@
-# wstunnel (For servers with internal TCP transparent proxy)
+# wstunnel (For servers, internal TCP transparent proxy)
 
 Establish a TCP socket tunnel over web socket connection, for circumventing strict firewalls. Server can see the real connecting IP behind (even with CloudFlare). 
 
