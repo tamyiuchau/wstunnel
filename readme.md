@@ -60,6 +60,7 @@ WantedBy=multi-user.target
 4. `# iptables -t mangle -A WSTUNNEL --jump ACCEPT`
 5. `# ip rule add fwmark 0x1 lookup 100`
 6. `# ip route add local 0.0.0.0/0 dev lo table 100`
+7. Remember to `# iptables -A INPUT -m tcp -p tcp --dport 35565 -j ACCEPT` so that clients can be connecting through `ws://8.8.8.8:35565`.
 
 ### Run wstunnel
 
