@@ -1,122 +1,81 @@
-# wstunnel
+# wstunnel (For servers with internal TCP transparent proxy)
 
-Establish a TCP socket tunnel over web socket connection, for circumventing strict firewalls.
+Establish a TCP socket tunnel over web socket connection, for circumventing strict firewalls. Server can see the real connecting IP behind (even with CloudFlare). 
 
 ## Installation
 
-npm install wstunnel
+1. Only Linux systems are supported. BSD is unknown.
+2. Install `git` and (`node` or `nodejs`) packages.
+2. `$ git clone https://github.com/Saren-Arterius/wstunnel.git`
+3. `$ cd wstunnel`
+4. `$ npm install`
 
 ## Usage
 
-Run the websocket tunnel server at port 8080:
+Assume that:
 
-    wstunnel -s 8080
+1. You have a TCP service listening on port `25565`
+2. Your external network interface is `eth0`, which IP is `192.168.0.50`
+3. Your internet IP is `8.8.8.8`
+4. `wstunnel` will be listening on port `35565`
 
-Run the websocket tunnel client:
+In that case, clients will be connecting to `8.8.8.8:25565` through `ws://8.8.8.8:35565`.
 
-    wstunnel -tunnel 33:2.2.2.2:33 ws://host:8080
+### Give node `CAP_NET_ADMIN`
 
-In the above example, client picks the final tunnel destination, similar to ssh tunnel.  Alternatively for security
-reason, you can lock tunnel destination on the server end, example:
+To make transparent proxy work, we need to give node's executable `CAP_NET_ADMIN` capability. If you wish `wstunnel` to listen on lower ports, `CAP_NET_BIND_SERVICE` should be given as well. If you just don't care about security, simply run node as root.
 
-    Server:
-        wstunnel -s 8080 -t 2.2.2.2:33
+To give it capability, you can either:
 
-    Client:
-        wstunnel -t 33 ws://server:8080
+1. `# cd bin && cp $(where node) . && setcap cap_net_admin+pe node`
+2. `# setcap cap_net_admin+pe $(where node)`
+3. Make a systemd unit as the following then start it later
+```
+[Unit]
+After=network.target
+Documentation=man:dnsmasq(8)
 
-In both examples, connection to localhost:33 on client will be tunneled to 2.2.2.2:33 on server via websocket
-connection in between.
+[Service]
+ExecStart=/usr/bin/node /path/to/wstunnel/bin/wstt.js -s 0.0.0.0:35565 -t 192.168.0.50:25565
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=1
+KillMode=process
+CapabilityBoundingSet=CAP_NET_ADMIN
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=full
+ProtectHome=true
+User=nobody
 
-To tell client to connect via http proxy, do:
+[Install]
+WantedBy=multi-user.target
+```
 
-    wstunnel -t 33:2.2.2.2:33 -p http://[user:pass@]proxyhost:proxyport wss://server:443
+### Setup firewall
 
-When connecting to secure websocket server via "wss://", client might want to disable 'unauthorized' certificate 
-rejection, via adding the '-c' option.
+1. `# iptables -t mangle -N WSTUNNEL`
+2. `# iptables -t mangle -A OUTPUT --protocol tcp --out-interface eth0 --sport 25565 --jump WSTUNNEL`
+3. `# iptables -t mangle -A WSTUNNEL --jump MARK --set-mark 0x1`
+4. `# iptables -t mangle -A WSTUNNEL --jump ACCEPT`
+5. `# ip rule add fwmark 0x1 lookup 100`
+6. `# ip route add local 0.0.0.0/0 dev lo table 100`
 
-    wstunnel -t 33:2.2.2.2:33 -c -p http://[user:pass@]proxyhost:proxyport wss://server:443
-    
-This also makes you vulnerable to MITM attack, so use with caution.
-    
-To get help, just run
+### Run wstunnel
 
-    wstunnel
+- If you have previously made a systemd unit, simply start it.
+- If you copied `node` to `/path/to/wstunnel/bin/` and performed `setcap`, `$ /path/to/wstunnel/bin/node -s 0.0.0.0:35565 -t 192.168.0.50:25565`
+- If you performed `setcap` on `/usr/bin/node`, `$ /usr/bin/node -s 0.0.0.0:35565 -t 192.168.0.50:25565`
+- If you don't care at all, `# /usr/bin/node -s 0.0.0.0:35565 -t 192.168.0.50:25565`
 
-## Use case
+## Gotchas
+- Don't do `# /usr/bin/node -s 0.0.0.0:35565 -t 127.0.0.1:25565`, you must proxy to traffic to a non-lo IP address. Just use `192.168.0.50:25565`.
 
-For tunneling over strict firewalls: WebSocket is a part of the HTML5 standard, any reasonable firewall will unlikely
-be so strict as to break HTML5. 
+## Project mothership
+- https://github.com/mhzed/wstunnel (Base)
+- https://github.com/inDream/wstunnel (Original transparent proxy fork)
 
-The tunnel server currently supports plain tcp socket only, for SSL support, use NGINX, shown below:
-
-On server:
-    wstunnel -s 8080
-
-On server, run nginx (>=1.3.13) with sample configuration:
-
-    server {
-        listen   443;
-        server_name  mydomain.com;
-
-        ssl  on;
-        ssl_certificate  /path/to/my.crt
-        ssl_certificate_key  /path/to/my.key
-        ssl_session_timeout  5m;
-        ssl_protocols  SSLv2 SSLv3 TLSv1;
-        ssl_ciphers  ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP;
-        ssl_prefer_server_ciphers   on;
-
-        location / {
-            proxy_pass http://127.0.0.1:8080;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header        Host            $host;
-            proxy_set_header        X-Real-IP       $remote_addr;
-            proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header        X-Forwarded-Proto $scheme;
-        }
-    }
-
-Then on client:
-
-    wstunnel -t 99:targethost:targetport wss://mydomain.com
-
-
-### OpenVPN use case
-
-Suppose on the server you have OpenVpn installed on the default port 1194,  then run wstunnel as such:
-
-    wstunnel -s 8888 -t 127.0.0.1:1194
-    
-Now on the server, you have a websocket server listening on 8888, any connection to 8888 will be forwarded to  
-127.0.0.1:1194, the OpenVpn port.
-
-Now on client, you run:
-
-    wstunnel -t 1194 ws://server:8888
-  
-Then launch the OpenVpn client, connect to localhost:1194 will be same as connect to server's 1194 port.
-
-This setup won't work if you are behind a strict firewall because:
-
-1. Non 80/443 ports are usually blocked by firewall.
-2. Stateful packet inspection will detect the content of your websocket tunnel, for example OPENVPN 
-   connection, or SSH connection, and then block it anyways.
-
-But the following setup works universally:
-
-1. Run wstunnel server mode
-        
-        wstunnel -s 8888 -t 127.0.0.1:1194
-        
-2. Run NGINX on server, listen on 443 for https connection, forward to wstunnel server localhost:8888
-3. On client, run wstunnel client mode using "wss://"
-
-        wstunnel -t 1194 wss://server
-
-4. Now on client, launch OPENVPN connection to localhost:1194, it will work.
-   
-The only possible way for above setup to not work is that your server is blacklisted by the firewall.
-
+## Thanks
+- yrutschle for [sslh repo](https://github.com/yrutschle/sslh) and [answers to my question](https://github.com/yrutschle/sslh/issues/100)
+- inDream for code changes and implementation 
+- You for reading this
