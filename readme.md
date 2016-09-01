@@ -27,8 +27,8 @@ To make transparent proxy work, we need to give node's executable `CAP_NET_ADMIN
 
 To give it capability, you can either:
 
-1. `# cd bin && cp $(where node) . && setcap cap_net_admin+pe node`
-2. `# setcap cap_net_admin+pe $(where node)`
+1. `# cd bin && cp /usr/bin/node . && setcap cap_net_admin+pe node`
+2. `# setcap cap_net_admin+pe /usr/bin/node`
 3. Make a systemd unit as the following then start it later
 ```
 [Unit]
