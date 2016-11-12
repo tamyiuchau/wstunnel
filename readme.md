@@ -62,7 +62,8 @@ WantedBy=multi-user.target
 5. `# ip rule add fwmark 0x1 lookup 100`
 6. `# ip route add local 0.0.0.0/0 dev lo table 100`
 7. Remember to `# iptables -A INPUT -m tcp -p tcp --dport 35565 -j ACCEPT` so that clients can be connecting through `ws://8.8.8.8:35565`.
-or just refer to `start.sh`.
+
+Or just refer to `start.sh`.
 
 ### Run wstunnel
 - If you have previously made a systemd unit, simply start it.
