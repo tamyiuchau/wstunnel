@@ -25,7 +25,8 @@ Assume that:
 In that case, clients will be connecting to `8.8.8.8:25565` through `ws://8.8.8.8:35565`.
 
 ### Give node `CAP_NET_ADMIN`
-To make transparent proxy work, we need to give node's executable `CAP_NET_ADMIN` capability. If you wish `wstunnel` to listen on lower ports, `CAP_NET_BIND_SERVICE` should be given as well. If you just don't care about security, simply run node as root.
+To make transparent proxy work, we need to give node's executable `CAP_NET_ADMIN` capability. If you wish `wstunnel` to listen on lower ports, `CAP_NET_BIND_SERVICE` should be given as well. If you just 
+don't care about security, simply run node as root.
 
 To give it capability, you can either:
 
