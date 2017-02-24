@@ -1,5 +1,6 @@
 
 net = require("net")
+dgram = require("dgram")
 WsStream = require "./WsStream"
 url = require('url')
 log = require "lawg"
@@ -17,7 +18,8 @@ module.exports = class wst_client extends require('events').EventEmitter
   ###
 
   constructor: ()->
-    @tcpServer = net.createServer();
+    @tcpServer = net.createServer()
+    @udpServer = dgram.createServer("udp4")
 
   verbose : ()->
     @on 'tunnel', (ws, sock)=>
@@ -47,6 +49,18 @@ module.exports = class wst_client extends require('events').EventEmitter
         localHost = null
       localPort = parseInt(localPort)
     localHost ?= '127.0.0.1'
+
+    @udpServer.bind(localPort,localHost)
+    @udpServer.on("message",(msg,rinfo)=>
+      if remoteAddr then wsurl = "#{wsHostUrl}/?dst=#{remoteAddr}&type=udp4" else wsurl = "#{wsHostUrl}/?type=udp4"
+      @tmp_msg = msg
+      if @httpOnly
+        "not implemented"
+      else
+        @_wsConnect @wsHostUrl, false, optionalHeaders, (error, wsStream)=>
+          if not error then wsStream.write @tmp_msg
+          wsStream.end
+      )
 
     @tcpServer.listen(localPort, localHost, cb)
     @tcpServer.on("connection", (tcpConn)=>
